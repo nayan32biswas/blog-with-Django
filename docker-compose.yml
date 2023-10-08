@@ -1,0 +1,51 @@
+version: "3.8"
+
+# environment
+x-volumes: &env-volume
+  ALLOWED_HOSTS: "*"
+  SECRET_KEY: "fb7edcb5d081b23d07ec7bb64c59ffe0e0c793109ec8a55583beb064eb274fb9"
+  DJANGO_SETTINGS_MODULE: "blog.development"
+
+  DEBUG: "True"
+
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+      args:
+        PACKAGE_TYPE: -dev
+    container_name: django_blog_api
+    image: nayanbiswas/django_blog:latest
+    restart: unless-stopped
+    command: python ./app/manage.py runserver 0.0.0.0:8000
+    ports:
+      - 8000:8000
+    environment:
+      <<: *env-volume
+    # env_file: .env
+    volumes:
+      - ./:/code
+    depends_on:
+      - db
+    networks:
+      - django_blog-backend-tier
+
+  db:
+    image: postgres:16
+    container_name: django_blog_db
+    restart: unless-stopped
+    networks:
+      - django_blog-backend-tier
+    volumes:
+      - django_blog-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+
+volumes:
+  django_blog-db:
+    driver: local
+
+networks:
+  django_blog-backend-tier:
+    driver: bridge
