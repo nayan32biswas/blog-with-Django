@@ -141,7 +141,7 @@ class CommentTestCase(TestCase):
 
     def test_update_comment(self):
         comment = self.create_comment()
-        url = f"{self.comment_url}{comment.id}/"
+        url = f"{self.comment_url}{comment.id}/"  # type: ignore
 
         updated_description = "New description"
         self.client.force_authenticate(user=self.base_user)
@@ -157,7 +157,7 @@ class CommentTestCase(TestCase):
 
     def test_delete_comment(self):
         comment = self.create_comment()
-        url = f"{self.comment_url}{comment.id}/"
+        url = f"{self.comment_url}{comment.id}/"  # type: ignore
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.delete(url, format="json")
@@ -165,7 +165,7 @@ class CommentTestCase(TestCase):
 
     def test_create_reply(self):
         comment = self.create_comment()
-        payload = {**COMMENT_DATA, "parent": comment.id}
+        payload = {**COMMENT_DATA, "parent": comment.id}  # type: ignore
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.post(self.comment_url, data=payload, format="json")
@@ -173,7 +173,7 @@ class CommentTestCase(TestCase):
 
     def test_update_reply(self):
         reply = self.create_reply()
-        url = f"{self.comment_url}{reply.id}/"
+        url = f"{self.comment_url}{reply.id}/"  # type: ignore
 
         updated_description = "New description"
         self.client.force_authenticate(user=self.base_user)
@@ -189,7 +189,7 @@ class CommentTestCase(TestCase):
 
     def test_delete_reply(self):
         reply = self.create_reply()
-        url = f"{self.comment_url}{reply.id}/"
+        url = f"{self.comment_url}{reply.id}/"  # type: ignore
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.delete(url, format="json")

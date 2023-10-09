@@ -58,7 +58,7 @@ class Comment(models.Model):
         ordering = ["-id"]
 
     def __str__(self) -> str:
-        return f"post_id:{self.post_id} :: parent:{not self.parent_id} :: {self.description[:32]} "
+        return f"post_id:{self.post_id} :: parent:{not self.parent_id} :: {self.description[:32]} "  # type: ignore
 
 
 class Reaction(models.Model):
@@ -71,7 +71,7 @@ class Reaction(models.Model):
         ordering = ["-id"]
 
     def __str__(self) -> str:
-        return f"{self.post_id} :: {self.user_id}"
+        return f"{self.post_id} :: {self.user_id}"  # type: ignore
 
 
 @receiver(post_save, sender=Comment)

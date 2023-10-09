@@ -106,7 +106,7 @@ class CommentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     _("Multi level nesting is not supported")
                 )
-            if post.id != parent.post_id:
+            if post.id != parent.post_id:  # type: ignore
                 raise serializers.ValidationError(
                     _("Post is not valid for parent comment")
                 )

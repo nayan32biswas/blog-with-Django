@@ -95,7 +95,7 @@ class CommentViewSet(
         post_slug = self.kwargs.get("slug")
         post = get_object_or_404(models.Post, slug=post_slug)
         return (
-            models.Comment.objects.filter(post=post.id, parent=None)
+            models.Comment.objects.filter(post=post.id, parent=None)  # type: ignore
             .order_by("-id")
             .select_related("user")
             .prefetch_related("replies__user")
