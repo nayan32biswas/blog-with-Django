@@ -92,5 +92,5 @@ def reaction_post_save_receiver(sender, instance, created, **kwargs):
 
 
 @receiver(post_delete, sender=Reaction)
-def reaction_post_delete_receiver(sender, instance, created, **kwargs):
+def reaction_post_delete_receiver(sender, instance, **kwargs):
     instance.post.handle_comment_count()

@@ -14,6 +14,13 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
     topics = TagListSerializerField()
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
     author_profile = UserMinimalSerializer(read_only=True, source="author")
+    has_my_reaction = serializers.SerializerMethodField()
+
+    def get_has_my_reaction(self, post):
+        user = self.context["request"].user
+        if user and user.is_authenticated:
+            return models.Reaction.objects.filter(user=user, post=post).exists()
+        return False
 
     class Meta:
         model = models.Post
@@ -29,6 +36,7 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
             "author_profile",
             "total_comment",
             "total_reaction",
+            "has_my_reaction",
         ]
         extra_kwargs = {
             "slug": {"read_only": True},

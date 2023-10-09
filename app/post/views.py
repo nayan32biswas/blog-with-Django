@@ -4,8 +4,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_filters import rest_framework as filters
 from rest_framework import filters as drf_filters
-from rest_framework import mixins, permissions, viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from . import models, serializers
 
@@ -93,9 +95,8 @@ class CommentViewSet(
 
     def get_queryset(self):
         post_slug = self.kwargs.get("slug")
-        post = get_object_or_404(models.Post, slug=post_slug)
         return (
-            models.Comment.objects.filter(post=post.id, parent=None)  # type: ignore
+            models.Comment.objects.filter(post__slug=post_slug, parent=None)  # type: ignore
             .order_by("-id")
             .select_related("user")
             .prefetch_related("replies__user")
@@ -115,3 +116,34 @@ class CommentViewSet(
         context = super().get_serializer_context()
         context["post_slug"] = self.kwargs.get("slug")
         return context
+
+
+class ReactionViewSet(
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    lookup_field = "pk"
+    queryset = models.Comment.objects.none()
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
+
+    def create(self, request, *args, **kwargs):
+        post_slug = kwargs.get("slug")
+        post = get_object_or_404(models.Post, slug=post_slug)
+        if models.Reaction.objects.filter(user=request.user, post=post).exists():
+            raise ValidationError("You already react on this post")
+        reaction = models.Reaction(user=request.user, post=post)
+        reaction.save()
+        return Response(
+            status=status.HTTP_201_CREATED, data={"message": "Reaction added"}
+        )
+
+    @action(detail=False, methods=["delete"])
+    def remove(self, request, *args, **kwargs):
+        post_slug = kwargs.get("slug")
+        post = get_object_or_404(models.Post, slug=post_slug)
+        models.Reaction.objects.filter(user=request.user, post=post).delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT, data={"message": "Reaction removed"}
+        )

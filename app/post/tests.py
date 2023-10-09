@@ -194,3 +194,27 @@ class CommentTestCase(TestCase):
         self.client.force_authenticate(user=self.base_user)
         response = self.client.delete(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+class ReactionTestCase(TestCase):
+    def setUp(self):
+        self.base_user = User.objects.create_user(**USER_DATA)  # type: ignore
+
+        post = models.Post(**POST_DATA, author=self.base_user)
+        post.save()
+
+        self.post = post
+        self.reaction_url = f"/api/v1/posts/{post.slug}/reactions/"
+        self.client: Any = APIClient()
+
+    def test_create_post_reaction(self):
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.post(self.reaction_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_delete_post_reaction(self):
+        url = f"{self.reaction_url}remove/"
+
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.delete(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
