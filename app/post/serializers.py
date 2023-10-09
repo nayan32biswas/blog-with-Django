@@ -100,9 +100,16 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         parent = attrs.get("parent")
-        if parent and parent.parent_id:
-            raise serializers.ValidationError(_("Multi level nesting is not supported"))
-        attrs["post"] = get_object_or_404(
-            models.Post, slug=self.context.get("post_slug")
-        )
+        post = get_object_or_404(models.Post, slug=self.context.get("post_slug"))
+        if parent:
+            if parent.parent_id:
+                raise serializers.ValidationError(
+                    _("Multi level nesting is not supported")
+                )
+            if post.id != parent.post_id:
+                raise serializers.ValidationError(
+                    _("Post is not valid for parent comment")
+                )
+
+        attrs["post"] = post
         return super().validate(attrs)

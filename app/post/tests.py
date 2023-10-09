@@ -116,6 +116,19 @@ class CommentTestCase(TestCase):
         self.comment_url = f"/api/v1/posts/{post.slug}/comments/"
         self.client: Any = APIClient()
 
+    def create_comment(self):
+        comment = models.Comment(**COMMENT_DATA, post=self.post, user=self.base_user)
+        comment.save()
+        return comment
+
+    def create_reply(self):
+        comment = self.create_comment()
+        reply = models.Comment(
+            **COMMENT_DATA, post=self.post, user=self.base_user, parent=comment
+        )
+        reply.save()
+        return reply
+
     def test_create_comment(self):
         payload = {**COMMENT_DATA}
         self.client.force_authenticate(user=self.base_user)
@@ -127,8 +140,7 @@ class CommentTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_update_comment(self):
-        comment = models.Comment(**COMMENT_DATA, post=self.post, user=self.base_user)
-        comment.save()
+        comment = self.create_comment()
         url = f"{self.comment_url}{comment.id}/"
 
         updated_description = "New description"
@@ -143,10 +155,41 @@ class CommentTestCase(TestCase):
         comment.refresh_from_db()
         self.assertEqual(comment.description, updated_description)
 
-    def test_delete_post(self):
-        comment = models.Comment(**COMMENT_DATA, post=self.post, user=self.base_user)
-        comment.save()
+    def test_delete_comment(self):
+        comment = self.create_comment()
         url = f"{self.comment_url}{comment.id}/"
+
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.delete(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_create_reply(self):
+        comment = self.create_comment()
+        payload = {**COMMENT_DATA, "parent": comment.id}
+
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.post(self.comment_url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_update_reply(self):
+        reply = self.create_reply()
+        url = f"{self.comment_url}{reply.id}/"
+
+        updated_description = "New description"
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.patch(
+            url, data={"description": updated_description}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = response.json()
+        self.assertEqual(res_data["description"], updated_description)
+
+        reply.refresh_from_db()
+        self.assertEqual(reply.description, updated_description)
+
+    def test_delete_reply(self):
+        reply = self.create_reply()
+        url = f"{self.comment_url}{reply.id}/"
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.delete(url, format="json")
