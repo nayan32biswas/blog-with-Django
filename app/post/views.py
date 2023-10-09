@@ -4,11 +4,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_filters import rest_framework as filters
 from rest_framework import filters as drf_filters
-from rest_framework import permissions, viewsets
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.exceptions import PermissionDenied
 
-from . import serializers
-from .models import Post
+from . import models, serializers
 
 User = get_user_model()
 
@@ -31,13 +30,13 @@ class PostFilter(filters.FilterSet):
     )
 
     class Meta:
-        model = Post
+        model = models.Post
         fields = ["tags", "title", "created_from", "created_to", "author__username"]
 
 
 class PostViewSet(viewsets.ModelViewSet):
     lookup_field = "slug"
-    queryset = Post.objects.none()
+    queryset = models.Post.objects.none()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = serializers.PostSerializer
     pagination_class = DefaultPagination
@@ -53,12 +52,12 @@ class PostViewSet(viewsets.ModelViewSet):
             and user.is_authenticated
             and user.username == self.request.query_params.get("author__username")  # type: ignore
         ):
-            return Post.objects.filter(author=user)
-        return Post.objects.filter()
+            return models.Post.objects.filter(author=user).order_by("-id")
+        return models.Post.objects.filter(publish_at__lt=timezone.now()).order_by("-id")
 
     def get_object(self):
         slug = self.kwargs[self.lookup_field]
-        post = get_object_or_404(Post, slug=slug)
+        post = get_object_or_404(models.Post, slug=slug)
         if (
             self.action == "retrieve"
             and post.publish_at
@@ -77,3 +76,42 @@ class PostViewSet(viewsets.ModelViewSet):
             if self.action == "list"
             else serializers.PostSerializer
         )
+
+
+class CommentViewSet(
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    lookup_field = "pk"
+    queryset = models.Comment.objects.none()
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    serializer_class = serializers.CommentSerializer
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        post_slug = self.kwargs.get("slug")
+        post = get_object_or_404(models.Post, slug=post_slug)
+        return (
+            models.Comment.objects.filter(post=post.id, parent=None)
+            .order_by("-id")
+            .select_related("user")
+            .prefetch_related("replies__user")
+        )
+
+    def get_object(self):
+        id = self.kwargs[self.lookup_field]
+        if not self.request.user:
+            raise PermissionDenied("Invalid access")
+
+        comment = get_object_or_404(models.Comment, id=id)
+        if self.request.user.id != comment.user_id:  # type: ignore
+            raise PermissionDenied("You don't have permission")
+        return comment
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["post_slug"] = self.kwargs.get("slug")
+        return context

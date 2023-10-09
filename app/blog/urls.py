@@ -32,8 +32,11 @@ logger = logging.getLogger(__name__)
 
 router = DefaultRouter()
 
-router.register(r"users", user_views.UserListViewSet)
-router.register(r"posts", post_views.PostViewSet)
+router.register(r"users", user_views.UserListViewSet, basename="users")
+router.register(r"posts", post_views.PostViewSet, basename="post")
+router.register(
+    r"posts/(?P<slug>[^/.]+)/comments", post_views.CommentViewSet, basename="post"
+)
 
 urlpatterns = [
     path("", base_views.BaseViewSet.as_view({"get": "home"}), name="Home"),

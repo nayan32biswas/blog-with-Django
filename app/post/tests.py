@@ -7,39 +7,41 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from .models import Post
+from . import models
 
 User = get_user_model()
 
 
+USER_DATA = {
+    "username": "demousername",
+    "password": "demopassword",
+    "full_name": "User Name",
+}
+POST_DATA = {
+    "title": "Test Post",
+    "publish_at": timezone.now(),
+    "short_description": "Short Description",
+    "description": "Long Description, Long Description, Long Description, Long Description, Long Description, Long Description",
+    "cover_image": None,
+    "topics": ["one", "two"],
+}
+COMMENT_DATA = {"description": "Comment Content"}
+
+
 class PostTestCase(TestCase):
     def setUp(self):
-        self.user_data = {
-            "username": "demousername",
-            "password": "demopassword",
-            "full_name": "User Name",
-        }
-        self.base_user = User.objects.create_user(**self.user_data)  # type: ignore
-
-        self.post_data = {
-            "title": "Test Post",
-            "publish_at": timezone.now(),
-            "short_description": "Short Description",
-            "description": "Long Description, Long Description, Long Description, Long Description, Long Description, Long Description",
-            "cover_image": None,
-            "topics": ["one", "two"],
-        }
+        self.base_user = User.objects.create_user(**USER_DATA)  # type: ignore
 
         self.post_url = "/api/v1/posts/"
         self.client: Any = APIClient()
 
     def create_post(self):
-        post = Post(**self.post_data, author=self.base_user)
+        post = models.Post(**POST_DATA, author=self.base_user)
         post.save()
         return post
 
     def test_create_post(self):
-        payload = {**self.post_data}
+        payload = {**POST_DATA}
         self.client.force_authenticate(user=self.base_user)
         response = self.client.post(self.post_url, data=payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -83,7 +85,7 @@ class PostTestCase(TestCase):
     def test_update_post(self):
         post = self.create_post()
         url = f"{self.post_url}{post.slug}/"
-        update_title = self.post_data["title"] + " update"
+        update_title = POST_DATA["title"] + " update"
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.patch(url, data={"title": update_title}, format="json")
@@ -97,6 +99,54 @@ class PostTestCase(TestCase):
     def test_delete_post(self):
         post = self.create_post()
         url = f"{self.post_url}{post.slug}/"
+
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.delete(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+class CommentTestCase(TestCase):
+    def setUp(self):
+        self.base_user = User.objects.create_user(**USER_DATA)  # type: ignore
+
+        post = models.Post(**POST_DATA, author=self.base_user)
+        post.save()
+
+        self.post = post
+        self.comment_url = f"/api/v1/posts/{post.slug}/comments/"
+        self.client: Any = APIClient()
+
+    def test_create_comment(self):
+        payload = {**COMMENT_DATA}
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.post(self.comment_url, data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_get_post_comments(self):
+        response = self.client.get(self.comment_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_update_comment(self):
+        comment = models.Comment(**COMMENT_DATA, post=self.post, user=self.base_user)
+        comment.save()
+        url = f"{self.comment_url}{comment.id}/"
+
+        updated_description = "New description"
+        self.client.force_authenticate(user=self.base_user)
+        response = self.client.patch(
+            url, data={"description": updated_description}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = response.json()
+        self.assertEqual(res_data["description"], updated_description)
+
+        comment.refresh_from_db()
+        self.assertEqual(comment.description, updated_description)
+
+    def test_delete_post(self):
+        comment = models.Comment(**COMMENT_DATA, post=self.post, user=self.base_user)
+        comment.save()
+        url = f"{self.comment_url}{comment.id}/"
 
         self.client.force_authenticate(user=self.base_user)
         response = self.client.delete(url, format="json")

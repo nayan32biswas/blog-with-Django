@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -60,3 +61,48 @@ class PostListSerializer(TaggitSerializer, serializers.ModelSerializer):
             "total_comment",
             "total_reaction",
         ]
+
+
+class ReplySerializer(serializers.ModelSerializer):
+    user_profile = UserMinimalSerializer(read_only=True, source="user")
+
+    class Meta:
+        model = models.Comment
+        fields = [
+            "id",
+            "description",
+            "user_profile",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+        }
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    user_profile = UserMinimalSerializer(read_only=True, source="user")
+    replies = ReplySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Comment
+        fields = [
+            "id",
+            "description",
+            "parent",
+            "user",
+            "user_profile",
+            "replies",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "parent": {"write_only": True},
+        }
+
+    def validate(self, attrs):
+        parent = attrs.get("parent")
+        if parent and parent.parent_id:
+            raise serializers.ValidationError(_("Multi level nesting is not supported"))
+        attrs["post"] = get_object_or_404(
+            models.Post, slug=self.context.get("post_slug")
+        )
+        return super().validate(attrs)
