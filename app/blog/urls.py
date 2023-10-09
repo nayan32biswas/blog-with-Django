@@ -22,6 +22,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
                                    SpectacularSwaggerView)
+from post import views as post_views
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 router = DefaultRouter()
 
 router.register(r"users", user_views.UserListViewSet)
+router.register(r"posts", post_views.PostViewSet)
 
 urlpatterns = [
     path("", base_views.BaseViewSet.as_view({"get": "home"}), name="Home"),

@@ -13,7 +13,7 @@ class BaseViewSet(viewsets.GenericViewSet):
         return Response(
             status=status.HTTP_200_OK,
             data={
-                "swagger-ui": "/api/schema/swagger-ui/",
+                "swagger-ui": "/api/v1/schema/swagger-ui/",
                 "redoc": "/api/v1/schema/redoc/",
             },
         )

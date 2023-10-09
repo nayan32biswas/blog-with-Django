@@ -40,6 +40,7 @@ THIRDPARTY_APPS = [
     "rest_framework_simplejwt",
     "django_filters",
     "corsheaders",
+    "taggit",
 ]
 
 INSTALLED_APPS = DEFAULT_APPS + LOCAL_APPS + THIRDPARTY_APPS
