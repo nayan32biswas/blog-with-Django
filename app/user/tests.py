@@ -5,8 +5,6 @@ from rest_framework.test import APIClient
 
 User = get_user_model()
 
-print("Discover test")
-
 
 class UserAuthTestCase(TestCase):
     def setUp(self):

@@ -22,6 +22,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
                                    SpectacularSwaggerView)
+from post import views as post_views
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView)
@@ -31,7 +32,14 @@ logger = logging.getLogger(__name__)
 
 router = DefaultRouter()
 
-router.register(r"users", user_views.UserListViewSet)
+router.register(r"users", user_views.UserListViewSet, basename="users")
+router.register(r"posts", post_views.PostViewSet, basename="post")
+router.register(
+    r"posts/(?P<slug>[^/.]+)/comments", post_views.CommentViewSet, basename="post"
+)
+router.register(
+    r"posts/(?P<slug>[^/.]+)/reactions", post_views.ReactionViewSet, basename="post"
+)
 
 urlpatterns = [
     path("", base_views.BaseViewSet.as_view({"get": "home"}), name="Home"),
