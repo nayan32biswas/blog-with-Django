@@ -35,6 +35,10 @@ services:
     image: postgres:16
     container_name: django_blog_db
     restart: unless-stopped
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
     networks:
       - django_blog-backend-tier
     volumes:
