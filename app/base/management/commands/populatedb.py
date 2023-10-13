@@ -1,14 +1,14 @@
-import random
 import multiprocessing
+import random
+from typing import List
 from uuid import uuid4
 
-from django.core.management.base import BaseCommand
+from base.utils import rand_str
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 from faker import Faker
-
 from post.models import Comment, Post, Reaction
-from base.utils import rand_str
 
 fake = Faker()
 User = get_user_model()
@@ -24,6 +24,15 @@ topics = (
     + ["music", "concerts", "festivals", "musicians"]
     + ["art", "painting", "sculpture", "creativity"]
 )
+
+
+def get_random_weighted_numbers(
+    lo: int, hi: int, w_r_lo: int, w_r_hi: int, frequency=10
+) -> List:
+    """return a random range where frequency of weighted_range is higher"""
+    weighted_numbers = frequency * list(range(w_r_lo, w_r_hi)) + list(range(lo, hi))
+    random.shuffle(weighted_numbers)
+    return weighted_numbers
 
 
 def create_users(total_user):
@@ -74,30 +83,37 @@ def create_reactions():
     print("Reaction Created")
 
 
-def create_comments(total_comment=10):
+def create_comments():
     user_ids = list(User.objects.all().values_list("id", flat=True))
     post_ids = list(Post.objects.all().values_list("id", flat=True))
+    weighted_numbers = get_random_weighted_numbers(
+        lo=1, hi=50, w_r_lo=1, w_r_hi=5, frequency=100
+    )
+
     comment_ops = []
-    for _ in range(total_comment):
-        comment_ops.append(
-            Comment(
-                post_id=random.choice(post_ids),
-                user_id=random.choice(user_ids),
-                description=fake.sentence(
-                    nb_words=random.randint(20, 200), variable_nb_words=False
-                ),
+    total_comment = int(len(post_ids) * 0.5)  # 50% post will have comment
+    for post_id in random.sample(post_ids, total_comment):
+        for _ in range(random.choice(weighted_numbers)):
+            """Post will have 1 to 50 comments where frequency of 1 to 5 will be 100 time high"""
+            comment_ops.append(
+                Comment(
+                    post_id=post_id,
+                    user_id=random.choice(user_ids),
+                    description=fake.sentence(
+                        nb_words=random.randint(20, 200), variable_nb_words=False
+                    ),
+                )
             )
-        )
     Comment.objects.bulk_create(comment_ops)
 
     # Create Replies
     comment_ids = list(Comment.objects.all().values("id", "post_id"))
-    total_reply = int(len(comment_ids) * 0.7)  # 70% comment will have reply
+    total_reply = int(len(comment_ids) * 0.3)  # 30% comment will have reply
 
     reply_ops = []
     for comment in random.sample(comment_ids, total_reply):
-        for _ in range(random.randint(1, 10)):
-            """Comment will have 1 to 10 replies"""
+        for _ in range(random.choice(weighted_numbers)):
+            """Comment will have 1 to 50 replies where frequency of 1 to 5 will be 100 time high"""
             reply_ops.append(
                 Comment(
                     parent_id=comment["id"],
