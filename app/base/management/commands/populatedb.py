@@ -56,12 +56,12 @@ def create_posts(total_post):
     user_ids = list(User.objects.all().values_list("id", flat=True))
     for _ in range(total_post):
         description = fake.sentence(
-            nb_words=random.randint(200, 1000), variable_nb_words=False
+            nb_words=random.randint(100, 500), variable_nb_words=False
         )
         post = Post.objects.create(
             author_id=random.choice(user_ids),
             title=fake.name(),
-            short_description=description[: random.randint(50, 200)],
+            short_description=description[: random.randint(10, 100)],
             description=description,
             publish_at=timezone.now(),
         )
@@ -100,7 +100,7 @@ def create_comments():
                     post_id=post_id,
                     user_id=random.choice(user_ids),
                     description=fake.sentence(
-                        nb_words=random.randint(20, 200), variable_nb_words=False
+                        nb_words=random.randint(10, 50), variable_nb_words=False
                     ),
                 )
             )
@@ -120,7 +120,7 @@ def create_comments():
                     post_id=comment["post_id"],
                     user_id=random.choice(user_ids),
                     description=fake.sentence(
-                        nb_words=random.randint(20, 100), variable_nb_words=False
+                        nb_words=random.randint(5, 20), variable_nb_words=False
                     ),
                 )
             )
