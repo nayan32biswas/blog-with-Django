@@ -3,12 +3,13 @@ import random
 from typing import List
 from uuid import uuid4
 
-from base.utils import rand_str
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from faker import Faker
 from post.models import Comment, Post, Reaction
+
+from base.utils import rand_str
 
 fake = Faker()
 User = get_user_model()
@@ -128,12 +129,37 @@ def create_comments():
     print("Comments Created")
 
 
+def update_relevant_fields():
+    from django.db import connection
+
+    update_total_comment_query = """
+        UPDATE post_post SET total_comment = COALESCE((
+            SELECT COUNT(*) FROM post_comment
+            WHERE post_comment.post_id = post_post.id
+            GROUP BY post_post.id
+        ), 0);
+    """
+    update_total_reaction_query = """
+        UPDATE post_post SET total_reaction = COALESCE((
+            SELECT COUNT(*) FROM post_reaction
+            WHERE post_reaction.post_id = post_post.id
+            GROUP BY post_post.id
+        ), 0);
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(update_total_comment_query)
+        cursor.execute(update_total_reaction_query)
+
+
 def populate_database(total_user=10, total_post=10):
     create_users(total_user)
     create_posts(total_post)
 
     create_reactions()
     create_comments()
+
+    update_relevant_fields()
 
 
 class Command(BaseCommand):
