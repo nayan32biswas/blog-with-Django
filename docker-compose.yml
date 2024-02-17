@@ -1,12 +1,18 @@
 version: "3.8"
 
 # environment
-x-volumes: &env-volume
-  ALLOWED_HOSTS: "*"
-  SECRET_KEY: "fb7edcb5d081b23d07ec7bb64c59ffe0e0c793109ec8a55583beb064eb274fb9"
-  DJANGO_SETTINGS_MODULE: "blog.development"
+x-env-db: &db-env
+  POSTGRES_DB: "blog"
+  POSTGRES_PASSWORD: "blog-password"
+  POSTGRES_USER: "blog-user"
 
+x-env-app: &app-env
+  ALLOWED_HOSTS: "*"
   DEBUG: "True"
+  DJANGO_SETTINGS_MODULE: "blog.development"
+  SECRET_KEY: "fb7edcb5d081b23d07ec7bb64c59ffe0e0c793109ec8a55583beb064eb274fb9"
+
+  <<: *db-env
 
 services:
   api:
@@ -22,7 +28,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      <<: *env-volume
+      <<: *app-env
     # env_file: .env
     volumes:
       - ./:/code
@@ -35,12 +41,16 @@ services:
     image: postgres:16
     container_name: django_blog_db
     restart: unless-stopped
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
     networks:
       - django_blog-backend-tier
     volumes:
       - django_blog-db:/var/lib/postgresql/data
     environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      <<: *db-env
 
 volumes:
   django_blog-db:

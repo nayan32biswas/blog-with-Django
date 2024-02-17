@@ -54,8 +54,10 @@ class PostViewSet(viewsets.ModelViewSet):
             and user.is_authenticated
             and user.username == self.request.query_params.get("author__username")  # type: ignore
         ):
-            return models.Post.objects.filter(author=user).order_by("-id")
-        return models.Post.objects.filter(publish_at__lt=timezone.now()).order_by("-id")
+            queryset = models.Post.objects.filter(author=user)
+        else:
+            queryset = models.Post.objects.filter(publish_at__lt=timezone.now())
+        return queryset.select_related("author").order_by("-id")
 
     def get_object(self):
         slug = self.kwargs[self.lookup_field]
